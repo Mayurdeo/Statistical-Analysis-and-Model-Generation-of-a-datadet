@@ -1,0 +1,134 @@
+---
+title: "STAT 512 Project"
+output: html_document
+---
+
+```{r, message=FALSE,warning=FALSE, Libraries}
+# Libraries
+library(fBasics)
+library(corrplot)
+library(ggplot2)
+library(gridExtra)
+library(alr3)
+library(car)
+```
+
+```{r, message=FALSE,warning=FALSE, EDA}
+# Load Data
+df <- read.csv("Concrete_Data.csv",stringsAsFactors = F)
+colnames(df)<- c("Cement (kg/m3)","Blast Furnace (kg/m3)", "Fly Ash (kg/m3)","Water (kg/m3)", "Superplasticizer(kg/m3)","Coarse Aggregate (kg/m3)","Fine Aggregate (kg/m3)", "Age (days)", "Concrete Compressive Strength (MPa)")
+response <- df[,"Concrete Compressive Strength (MPa)"]
+
+# Check column class
+str(df)
+# Check for completeness of dataset
+which(is.na(df)==TRUE)
+
+# Summary Statistics of Response Variable and Predictors
+sum_stats <- as.data.frame(basicStats(df)[c("Mean", "Stdev", "Median", "Minimum", "Maximum", "Variance"),])
+
+# Distribution of Response Variable
+ggplot(data=df, aes(df$`Concrete Compressive Strength (MPa)`))+ geom_histogram(aes(y =..density..), binwidth= 7, col="red", fill="green", alpha = .5) + geom_density(col=2) + labs(title="Distribution of Concrete Compressive Strengths") + labs(x="Concrete Compressive Strengths", y="Density") 
+
+# Distribution of Predictor Variables
+## Cement
+p1 <- ggplot(data=df, aes(df$`Cement (kg/m3)`))+ geom_histogram(aes(y =..density..), binwidth=35,  col="green", fill="blue", alpha = .5) + labs(title = " Distribution of Cement Content in Concrete Samples", x = "Cement Content")
+## Blast Furnace
+p2 <- ggplot(data=df, aes(df$`Blast Furnace (kg/m3)`))+ geom_histogram(aes(y =..density..),binwidth=60, col="green", fill="blue", alpha = .5) + labs(title = " Distribution of Blast Furnace Content in Concrete Samples", x = "Blast Furnace Content")
+## Fly Ash
+p3 <- ggplot(data=df, aes(df$`Fly Ash (kg/m3)`))+ geom_histogram(aes(y =..density..), binwidth=30, col="green", fill="blue", alpha = .5) + labs(title = " Distribution of Fly Ash Content in Concrete Samples", x = "Fly Ash Content")
+## Water
+p4 <- ggplot(data=df, aes(df$`Water (kg/m3)`))+ geom_histogram(aes(y =..density..),binwidth=20,col="green", fill="blue", alpha = .5) + labs(title = " Distribution of Water Content in Concrete Samples", x = "Water Content")
+## Superplasticizer
+p5 <- ggplot(data=df, aes(df$`Superplasticizer(kg/m3)`))+ geom_histogram(aes(y =..density..), binwidth=6, col="green", fill="blue", alpha = .5) + labs(title = " Distribution of Superplasticizer Content in Concrete Samples", x = "Superplasticizer Content")
+## Coarse Aggregate
+p6 <- ggplot(data=df, aes(df$`Coarse Aggregate (kg/m3)`))+ geom_histogram(aes(y =..density..),binwidth=40, col="green", fill="blue", alpha = .5) + labs(title = " Distribution of Coarse Aggregate Content in Concrete Samples", x = "Coarse Aggregate Content")
+## Fine Aggregate
+p7 <- ggplot(data=df, aes(df$`Fine Aggregate (kg/m3)`))+ geom_histogram(aes(y =..density..),binwidth=45,col="green", fill="blue", alpha = .5) + labs(title = " Distribution of Fine Aggregate Content in Concrete Samples", x = "Fine Aggregate Content")
+## Age
+p8 <- ggplot(data=df, aes(df$`Age (days)`))+ geom_histogram(aes(y =..density..), binwidth=40, col="green", fill="blue", alpha = .5) + labs(title = " Distribution of Ages of Concrete Samples", x = " Sample Ages")
+
+# Boxplot Assuming Age is a Factor
+df1<- df
+df1$`Age (days)`<-as.factor(df1$`Age (days)`)
+levels(df1$`Age (days)`)<- c("[0,91)","[91,180)","[180,270)","[270,365]")
+ggplot(df1, aes(x=df1$`Age (days)`, y=df1$`Concrete Compressive Strength (MPa)`, fill=df1$`Age (days)`)) +geom_boxplot(outlier.colour="red", outlier.shape=8,outlier.size=2)+labs(title = "Concrete Sample's Compressive Strengths for Different Ages", x = " Sample Ages (Days)", y="Compressive Strengths (MPa)")+ guides(fill=guide_legend(title="Age Groups"))
+
+
+# Scatterplot Matrix
+pairs(df)
+
+# Correlation Matrix and Correlation Plot
+sort(cor(df)[1:8,9], decreasing=TRUE) # Correlation Coefficients of Predictors with Response Variable
+corrplot.mixed(cor(df), lower.col = "black", number.cex = 0.9,upper="color", tl.cex=0.7)# Correlation Plot of Cement Data
+
+```
+```{r , message=FALSE,warning=FALSE, Model Building}
+# Basic Model
+basic_model <- lm(df$`Concrete Compressive Strength (MPa)`~., data=df)
+par(mfrow=c(2,2)) # Enables to see all four regresion diagnostic plots at the same time.
+plot(basic_model)
+######BASIC MODEL
+model3<-lm(df$`Concrete Compressive Strength (MPa)`~df$`Cement (kg/m3)`)
+scope<- ~ df$`Cement (kg/m3)`+df$`Blast Furnace (kg/m3)`+df$`Fly Ash (kg/m3)`+df$`Superplasticizer(kg/m3)`+df$`Water (kg/m3)`+df$`Coarse Aggregate (kg/m3)`+df$`Fine Aggregate (kg/m3)`+factor(df$`Age (days)`)
+######FORWARD VARIABLE SELECTION
+model3.forward<-step(model3,scope=scope,direction="forward") #using forward variable selectionqq
+stepmodel<-lm(df$`Concrete Compressive Strength (MPa)` ~ df$`Cement (kg/m3)` + factor(df$`Age (days)`) + df$`Blast Furnace (kg/m3)` + df$`Water (kg/m3)` + df$`Fly Ash (kg/m3)`)
+######CHECK FOR VARIANCE
+residualPlots(stepmodel) #Tukey Test and pearson residual plots,(check for variance), should get value > 0.05 to reject the null hypothesis
+#####NORAMALITY CHECK
+qqPlot(stepmodel, id.no=2)
+#check for zeros in each col df.
+for(i in 1:ncol(df)){
+  if(length(which(df[,i]!=0))){
+    df[,i]<- df[,i]+1
+  }
+}
+######TRANSFORMATION
+summary(b<-powerTransform(cbind(`Cement (kg/m3)`,`Blast Furnace (kg/m3)`,`Fly Ash (kg/m3)`,`Water (kg/m3)`) ~ 1, df))#Transform check
+testTransform(b,c(0.33,0,0,1))#Testing the transformation being used
+cementtrans<-(df$`Cement (kg/m3)`^0.33-1)/0.33  #Performing Transformations
+blastftrans<-log(df$`Blast Furnace (kg/m3)`)
+flyashtransform<-log(df$`Fly Ash (kg/m3)`)
+########TRANSFORMED MODEL
+transstepmodel<-lm(df$`Concrete Compressive Strength (MPa)` ~ cementtrans + factor(df$`Age (days)`) + blastftrans + df$`Water (kg/m3)` + flyashtransform )#transformed model
+###CHECK FOR VARIANCE AND NORMALITY
+residualPlots(transstepmodel)
+qqPlot(transstepmodel, id.no=2)#check for noramality
+######OUTLIER TEST
+outlierTest(transstepmodel)
+####DIAGNOSTIC TEST
+influenceIndexPlot(transstepmodel)
+influencePlot(transstepmodel)
+
+##### TEST EFFECT OF REMOVING OUTLIERS ON MODEL PARAMETER ESTIMATES
+df2 <-df[-384,] # Point 384 is a suspected outlier
+cementtrans2<-(df2$`Cement (kg/m3)`^0.33-1)/0.33  
+blastftrans2<-log(df2$`Blast Furnace (kg/m3)`)
+flyashtransform2<-log(df2$`Fly Ash (kg/m3)`)
+transstepmodel2<-lm(df2$`Concrete Compressive Strength (MPa)` ~ cementtrans2 + factor(df2$`Age (days)`) + blastftrans2 + df2$`Water (kg/m3)` + flyashtransform2 )
+
+##### PREDICTIVE MODELLING
+df3 <- df
+colnames(df3)<- c("cement","blastfurnace","flyash","water","superp","ca", "fa","age","strength")
+
+# Variable Transformation
+df3$cement<-(df3$cement^0.33-1)/0.33  
+df3$blastfurnace<-log(df3$blastfurnace)
+df3$flyash<-log(df3$flyash)
+
+# Data Splitting
+ind <-  sample.int(n = nrow(df3), size = floor(.75*nrow(df3)), replace = F)
+train<-df3[ind,]
+test<-df3[-ind,]
+
+# Model Building
+transstepmodel3 <- lm(strength ~ cement+ factor(age) + blastfurnace + water + flyash, data = train)
+
+# Make Predictions
+predictions <- predict(transstepmodel3,newdata = test)
+
+#Calculate Score
+RMSE <- sqrt(mean((test$strength-predictions)^2))
+```
+
