@@ -9,4 +9,4 @@ It involves the following steps:
 6)Diagnostic Test 
 7)Predictive Modeling
 
-The project has been further described in detail in the file
+The project has been further described in detail in the file "STAT 512 Project Report Final.pdf"
