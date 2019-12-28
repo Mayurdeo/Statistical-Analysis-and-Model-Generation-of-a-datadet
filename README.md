@@ -1,4 +1,4 @@
-# Statistical-Analysis-and-Model-Generation-of-a-datadet
+# Statistical-Analysis-and-Model-Generation-of-a-dataset
 Performed statistical analysis  on a dataset (based on a study on concrete’s components). Generated the best possible model to predict the response i.e. the Compressive strength.
 It involves the following steps:
 1)Exploratory Data Analysis
